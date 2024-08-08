@@ -269,23 +269,74 @@ function Create-ScheduledTask {
     param(
         [Parameter(Mandatory=$true)]
         [string]$AppName,
-        [string]$ScriptName,
         [datetime]$ScheduleTime
     )
 
     $detail = @()
     $errorCode = 0
 
-    $scriptPath = "C:\\dbt-scripts\\$ScriptName"
-    $scriptArguments = "-AppName '$AppName'"
-    $action = New-ScheduledTaskAction -Execute "PowerShell.exe" -Argument "-NoProfile -File `"$scriptPath`" $scriptArguments"
-    $trigger = New-ScheduledTaskTrigger -At $ScheduleTime -Once
+    $scriptDirectory = $config.ScriptDirectory
+    $scriptPath = "$scriptDirectory\\Update-$AppName.ps1"
+    $processNames = $config.Applications[$AppName].ProcessNames -join "', '"
+
+    $scriptContent = @"
+# Auto-generated script to update $AppName
+param(
+    [Parameter(Mandatory=\$true)]
+    [string]`$AppName
+)
+
+# Define a function to restart the application
+function Restart-Processes {
+    param(
+        [Parameter(Mandatory=\$true)]
+        [string[]]`$ProcessNames,
+        [string]`$Arguments = ""
+    )
+
+    `$detail = @()
+    `$errorCode = 0
+
+    `$processNamesToRestart = `$ProcessNames | Select-Object -Unique
+
+    foreach (`$processName in `$processNamesToRestart) {
+        `$detail += "Restarting process: `$processName"
+        try {
+            if (`$Arguments) {
+                Start-Process -FilePath `$processName -ArgumentList `$Arguments
+            } else {
+                Start-Process -FilePath `$processName
+            }
+            `$detail += "Process `$processName successfully restarted."
+        } catch {
+            `$detail += "Failed to restart process `$processName."
+            `$errorCode = 88
+        }
+    }
+
+    return [PSCustomObject]@{
+        ErrorCode = `$errorCode
+        Detail = `$detail -join "`n"
+    }
+}
+
+# Stop and restart the processes for the application
+Update-Application -AppName `$AppName -ProcessNames '$processNames'
+"@
 
     try {
+        # Write the script content to a file
+        Set-Content -Path $scriptPath -Value $scriptContent -Force
+        $detail += "Script file for $AppName created successfully at $scriptPath."
+
+        $scriptArguments = "-AppName '$AppName'"
+        $action = New-ScheduledTaskAction -Execute "PowerShell.exe" -Argument "-NoProfile -File `"$scriptPath`" $scriptArguments"
+        $trigger = New-ScheduledTaskTrigger -At $ScheduleTime -Once
+
         Register-ScheduledTask -Action $action -Trigger $trigger -TaskName "Update$AppName" -Force
         $detail += "Scheduled task for $AppName created successfully."
     } catch {
-        $detail += "Failed to create scheduled task for $AppName."
+        $detail += "Failed to create script file or scheduled task for $AppName."
         $errorCode = 1
     }
 
@@ -294,6 +345,7 @@ function Create-ScheduledTask {
         Detail = $detail -join "`n"
     }
 }
+
 
 #ScriptBlock for Teams update
 $TeamsUpdate = {
@@ -389,6 +441,7 @@ function Show-AutoClosingMessageBox {
     $timer.Dispose()
 }
 
+#Function to Show the Form
 #Function to Show the Form
 function Show-UpdatePromptForm {
     param($appName)
@@ -528,7 +581,7 @@ function Show-UpdatePromptForm {
     $ButtonSchedule.Add_Click({
         # Call the appropriate scheduled task creation based on the app name
         $scheduleTime = (Get-Date).Date.AddHours(19)
-        $output = Create-ScheduledTask -AppName $appName -ScriptName $config.Applications[$appName].ScheduledScript -ScheduleTime $scheduleTime
+        $output = Create-ScheduledTask -AppName $appName -ScheduleTime $scheduleTime
 
         # Store the output in the script-scoped variable
         $script:formOutput = $output

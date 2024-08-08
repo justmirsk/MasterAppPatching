@@ -1,40 +1,36 @@
 {
   "Applications": {
     "Edge": {
-      "CheckPath": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\new_msedge.exe",
-      "UpdateScript": "EdgeUpdate.ps1",
-      "ScheduledScript": "EdgeScheduledUpdate.ps1",
-      "ProcessNames": ["edge", "ms-edge"]
+      "CheckPath": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+      "ProcessNames": ["msedge", "edge"],
+      "ScheduledScript": "EdgeScheduledUpdate.ps1"
     },
     "Chrome": {
-      "CheckPath": "C:\\Program Files\\Google\\Chrome\\Application\\new_chrome.exe",
-      "UpdateScript": "ChromeUpdate.ps1",
-      "ScheduledScript": "ChromeScheduledUpdate.ps1",
-      "ProcessNames": ["chrome"]
+      "CheckPath": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+      "ProcessNames": ["chrome"],
+      "ScheduledScript": "ChromeScheduledUpdate.ps1"
     },
     "Firefox": {
       "CheckPath": "C:\\Program Files\\Mozilla Firefox\\firefox.exe",
-      "UpdateScript": "FirefoxUpdate.ps1",
-      "ScheduledScript": "FirefoxScheduledUpdate.ps1",
-      "ProcessNames": ["firefox"]
+      "ProcessNames": ["firefox"],
+      "ScheduledScript": "FirefoxScheduledUpdate.ps1"
     },
     "Teams": {
-      "CheckPath": "C:\\Program Files\\Microsoft Teams\\current\\Teams.exe",
-      "UpdateScript": "TeamsUpdate.ps1",
-      "ScheduledScript": "TeamsScheduledUpdate.ps1",
-      "ProcessNames": ["Teams", "ms-teams"]
+      "CheckPath": "C:\\Users\\%USERNAME%\\AppData\\Local\\Microsoft\\Teams\\current\\Teams.exe",
+      "ProcessNames": ["Teams", "ms-teams"],
+      "ScheduledScript": "TeamsScheduledUpdate.ps1"
     },
     "M365Apps": {
       "CheckPath": "C:\\Program Files\\Microsoft Office\\root\\Office16\\WINWORD.EXE",
-      "UpdateScript": "M365AppsUpdate.ps1",
-      "ScheduledScript": "M365AppsScheduledUpdate.ps1",
-      "ProcessNames": ["excel", "powerpnt", "winword", "outlook", "onenote", "visio"]
+      "ProcessNames": ["winword", "excel", "powerpnt", "outlook", "onenote", "visio"],
+      "ScheduledScript": "M365AppsScheduledUpdate.ps1"
     },
     "Win11FeatureUpdate": {
       "TargetVersion": "10.0.22000",
-      "UpdateScript": "Win11FeatureUpdate.ps1",
+      "ProcessNames": ["explorer"],
       "ScheduledScript": "Win11FeatureUpdateScheduledUpdate.ps1"
     }
   },
+  "ScriptDirectory": "C:\\temp\\",
   "LogoFilePath": "C:\\temp\\ScriptLogo.png"
 }
