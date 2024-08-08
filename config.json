@@ -31,6 +31,6 @@
       "ScheduledScript": "Win11FeatureUpdateScheduledUpdate.ps1"
     }
   },
-  "ScriptDirectory": "C:\\temp\\",
+  "ScriptDirectory": "C:\\temp",
   "LogoFilePath": "C:\\temp\\ScriptLogo.png"
 }

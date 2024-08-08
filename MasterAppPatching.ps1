@@ -108,7 +108,6 @@ function PendingUpdateCheck {
     return $updatePending
 }
 
-
 function Test-UserLoggedIn {
     $users = quser 2>&1
     if ($users -like "*No user exists*") {
@@ -276,20 +275,65 @@ function Create-ScheduledTask {
     $errorCode = 0
 
     $scriptDirectory = $config.ScriptDirectory
-    $scriptPath = "$scriptDirectory\\Update-$AppName.ps1"
-    $processNames = $config.Applications[$AppName].ProcessNames -join "', '"
+    $scriptPath = "$scriptDirectory\Update-$AppName.ps1"
+    $processNames = $config.Applications.$AppName.ProcessNames -join "', '"
 
     $scriptContent = @"
 # Auto-generated script to update $AppName
-param(
-    [Parameter(Mandatory=\$true)]
-    [string]`$AppName
-)
+`$AppName = '$AppName'
+`$ProcessNames = @('$processNames')
 
-# Define a function to restart the application
+function Stop-Processes {
+    param(
+        [string[]]`$ProcessNames
+    )
+
+    `$detail = @()
+    `$errorCode = 0
+    `$stoppedProcesses = @()
+
+    foreach (`$processName in `$ProcessNames) {
+        `$detail += "Checking for process: `$processName"
+        `$processes = Get-Process -Name `$processName -ErrorAction SilentlyContinue
+        if (`$processes) {
+            foreach (`$process in `$processes) {
+                try {
+                    if (`$process.MainWindowHandle -ne 0) {
+                        `$process.CloseMainWindow() | Out-Null
+                        `$timeout = 0
+                        while (-not `$process.HasExited -and `$timeout -lt 5) {
+                            Start-Sleep -Seconds 1
+                            `$timeout++
+                        }
+                    }
+
+                    #if (-not `$process.HasExited) {
+                        #`$process | Stop-Process -Force
+                        #`$detail += "Process `$processName forcefully stopped."
+                    #} else {
+                        #`$detail += "Process `$processName successfully stopped."
+                    #}
+
+                    #`$stoppedProcesses += `$processName
+                } catch {
+                    `$detail += "An error occurred while stopping `$processName"
+                    `$errorCode = 1
+                }
+            }
+        } else {
+            `$detail += "Process `$processName not running or not found."
+        }
+    }
+
+    return [PSCustomObject]@{
+        ErrorCode = `$errorCode
+        Detail = `$detail -join "`n"
+        StoppedProcesses = `$stoppedProcesses
+    }
+}
+
 function Restart-Processes {
     param(
-        [Parameter(Mandatory=\$true)]
         [string[]]`$ProcessNames,
         [string]`$Arguments = ""
     )
@@ -320,8 +364,32 @@ function Restart-Processes {
     }
 }
 
-# Stop and restart the processes for the application
-Update-Application -AppName `$AppName -ProcessNames '$processNames'
+# Stop processes
+`$stopResult = Stop-Processes -ProcessNames `$ProcessNames
+`$detail = `$stopResult.Detail
+if (`$stopResult.ErrorCode -ne 0) {
+    return [PSCustomObject]@{
+        ResultCode = `$stopResult.ErrorCode
+        Detail = `$detail -join "`n"
+    }
+}
+
+Start-Sleep -Seconds 3
+
+# Restart processes
+`$restartResult = Restart-Processes -ProcessNames `$stopResult.StoppedProcesses -Arguments "--restore-last-session"
+`$detail += `$restartResult.Detail
+if (`$restartResult.ErrorCode -ne 0) {
+    return [PSCustomObject]@{
+        ResultCode = `$restartResult.ErrorCode
+        Detail = `$detail -join "`n"
+    }
+}
+
+return [PSCustomObject]@{
+    ResultCode = 0
+    Detail = `$detail -join "`n"
+}
 "@
 
     try {
@@ -329,8 +397,7 @@ Update-Application -AppName `$AppName -ProcessNames '$processNames'
         Set-Content -Path $scriptPath -Value $scriptContent -Force
         $detail += "Script file for $AppName created successfully at $scriptPath."
 
-        $scriptArguments = "-AppName '$AppName'"
-        $action = New-ScheduledTaskAction -Execute "PowerShell.exe" -Argument "-NoProfile -File `"$scriptPath`" $scriptArguments"
+        $action = New-ScheduledTaskAction -Execute "PowerShell.exe" -Argument "-NoProfile -File `"$scriptPath`""
         $trigger = New-ScheduledTaskTrigger -At $ScheduleTime -Once
 
         Register-ScheduledTask -Action $action -Trigger $trigger -TaskName "Update$AppName" -Force
@@ -646,6 +713,9 @@ function Show-UpdatePromptForm {
 # Load the configuration file
 $config = Get-Config -ConfigFilePath "C:\\GitHub\\MasterAppPatching\\config.json"
 
+$processNames = $config.Applications.$AppName.ProcessNames -join "', '"
+
+Write-Output "Process Names are $processNames"
 # Main script execution starts here
 Write-Output "1. This is the beginning of the script, appName is $appName"
 
