@@ -1,0 +1,29 @@
+{
+  "Applications": {
+    "Edge": {
+      "CheckPath": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\new_msedge.exe",
+      "ScheduledScript": "EdgeScheduledUpdate.ps1"
+    },
+    "Chrome": {
+      "CheckPath": "C:\\Program Files\\Google\\Chrome\\Application\\new_chrome.exe",
+      "ScheduledScript": "ChromeScheduledUpdate.ps1"
+    },
+    "Firefox": {
+      "CheckPath": "C:\\Program Files\\Mozilla Firefox\\updated",
+      "ScheduledScript": "FirefoxScheduledUpdate.ps1"
+    },
+    "Teams": {
+      "CheckPath": "",
+      "ScheduledScript": "TeamsScheduledUpdate.ps1"
+    },
+    "M365Apps": {
+      "CheckPath": "C:\\Program Files\\Common Files\\Microsoft Shared\\ClickToRun\\OfficeC2RClient.exe",
+      "ScheduledScript": "M365AppsScheduledUpdate.ps1"
+    },
+    "Win11FeatureUpdate": {
+      "TargetVersion": "10.0.22000",
+      "ScheduledScript": "Win11FeatureUpdateScheduledUpdate.ps1"
+    }
+  },
+  "LogoFilePath": "C:\\dbt-scripts\\ScriptLogo.png"
+}
