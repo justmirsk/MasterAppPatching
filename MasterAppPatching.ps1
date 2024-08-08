@@ -1,54 +1,59 @@
 <#
-        .SYNOPSIS
-        Master application patching script for vulnerability management
+    .SYNOPSIS
+    Master application patching script for vulnerability management
 
-        .DESCRIPTION
-        Checks to see if there is an active Zoom or Teams call, if not, proceeds with application update logic.  Script will prompt for user approval to restart applications if a user is logged on, otherwise, script will update
-        required applications and auto close the apps if needed.
-        
-        Target applications include:
-        - Microsoft Teams
-        - Zoom Client
-        - Google Chrome
-        - Microsoft Edge
-        - Firefox
-        - Microsoft 365 Apps for Business
-        - Windows 11 Feature Updates: Feature Update is retrieving end users approval only.  This generates RMM alerts and tasks within RMM system to start the Feature Update silently in the background.
-        
-        Dependencies Include Syncro RMM module for application updates that need to be kicked off as admin.  If an app update or install is required rather than an app restart, the system will generate the appropriate Broadcast Message
-        RMM alerts on the device, and log the activity in Syncro, which will trigger automation rules in Syncro to kick off the corresponding scripts.
+    .DESCRIPTION
+    Checks to see if there is an active Zoom or Teams call, if not, proceeds with application update logic. Script will prompt for user approval to restart applications if a user is logged on, otherwise, script will update
+    required applications and auto close the apps if needed.
 
-        .PARAMETER AppName
-        Specifies the app ID to be updated.  This processes the correct logic for the specific application
+    Target applications include:
+    - Microsoft Teams
+    - Zoom Client
+    - Google Chrome
+    - Microsoft Edge
+    - Firefox
+    - Microsoft 365 Apps for Business
+    - Windows 11 Feature Updates: Feature Update is retrieving end users approval only. This generates RMM alerts and tasks within RMM system to start the Feature Update silently in the background.
 
-        .INPUTS
-        -appName.  Supply the Application Name
+    Dependencies Include Syncro RMM module for application updates that need to be kicked off as admin. If an app update or install is required rather than an app restart, the system will generate the appropriate Broadcast Message
+    RMM alerts on the device, and log the activity in Syncro, which will trigger automation rules in Syncro to kick off the corresponding scripts.
 
-        .OUTPUTS
-        Feedback on overall progress is supplied via Write-Output
-        Possible exit codes are 0(successful) 1(Failure) 2(User Pressed Cancel Button) 3(User Scheduled for later) 88(Closed application, failed to restart application) 99(User is on an active Call) 100(Selected application has no update available)
+    .PARAMETER AppName
+    Specifies the app ID to be updated. This processes the correct logic for the specific application
 
-        .EXAMPLE
-        PS> MasterAppPatching -AppName Teams
-        PS> MasterAppPatching -AppName Firefox
-        PS> MasterAppPatching -AppName Chrome
-        PS> MasterAppPatching -AppName Edge
-        PS> MasterAppPatching -AppName Webview2
-        PS> MasterAppPatching -AppName M365Apps
-        PS> MasterAppPatching -AppName Win11FeatureUpdate
-                
-        .Link                 
-        Code derived from multiple sources, logic and overall script developed by Direct Business Technologies/Justin Mirsky
-        # Clearing Teams Cache by Mark Vale
-        # Uninstall Teams by Rudy Mens
-        Details on Edge update process found at https://textslashplain.com/2023/03/25/how-microsoft-edge-updates/
-        Process to close and reopen edge properly found at https://github.com/papersaltserver/PowerShell-Scripts/blob/master/Restore-EdgeTabs.ps1
-        Microsoft Store app update info found at https://p0w3rsh3ll.wordpress.com/2012/11/08/search-updates-using-the-windows-store/    
+    .PARAMETER Override
+    Specifies whether to override the pending update check. Default is $false.
+
+    .INPUTS
+    -appName. Supply the Application Name
+    -Override. Supply the Override option
+
+    .OUTPUTS
+    Feedback on overall progress is supplied via Write-Output
+    Possible exit codes are 0(successful) 1(Failure) 2(User Pressed Cancel Button) 3(User Scheduled for later) 88(Closed application, failed to restart application) 99(User is on an active Call) 100(Selected application has no update available)
+
+    .EXAMPLE
+    PS> MasterAppPatching -AppName Teams
+    PS> MasterAppPatching -AppName Firefox
+    PS> MasterAppPatching -AppName Chrome
+    PS> MasterAppPatching -AppName Edge
+    PS> MasterAppPatching -AppName Webview2
+    PS> MasterAppPatching -AppName M365Apps
+    PS> MasterAppPatching -AppName Win11FeatureUpdate
+
+    .Link
+    Code derived from multiple sources, logic and overall script developed by Direct Business Technologies/Justin Mirsky
+    # Clearing Teams Cache by Mark Vale
+    # Uninstall Teams by Rudy Mens
+    Details on Edge update process found at https://textslashplain.com/2023/03/25/how-microsoft-edge-updates/
+    Process to close and reopen edge properly found at https://github.com/papersaltserver/PowerShell-Scripts/blob/master/Restore-EdgeTabs.ps1
+    Microsoft Store app update info found at https://p0w3rsh3ll.wordpress.com/2012/11/08/search-updates-using-the-windows-store/
 #>
 #Define a Param block to use custom parameters in the project 
 param(
     [Parameter(Mandatory=$true)]
-    [string]$AppName
+    [string]$AppName,
+    [switch]$Override
 )
 
 #---------------------------------------------- 
@@ -148,15 +153,31 @@ function Stop-Processes {
 
     foreach ($processName in $ProcessNames) {
         $detail += "Checking for process: $processName"
-        $process = Get-Process -Name $processName -ErrorAction SilentlyContinue
-        if ($process) {
-            try {
-                $process | Stop-Process -Force
-                $detail += "Process $processName successfully stopped."
-                $stoppedProcesses += $processName
-            } catch {
-                $detail += "An error occurred while stopping $processName"
-                $errorCode = 1
+        $processes = Get-Process -Name $processName -ErrorAction SilentlyContinue
+        if ($processes) {
+            foreach ($process in $processes) {
+                try {
+                    if ($process.MainWindowHandle -ne 0) {
+                        $process.CloseMainWindow() | Out-Null
+                        $timeout = 0
+                        while (!$process.HasExited -and $timeout -lt 5) {
+                            Start-Sleep -Seconds 1
+                            $timeout++
+                        }
+                    }
+
+                    if (!$process.HasExited) {
+                        $process | Stop-Process -Force
+                        $detail += "Process $processName forcefully stopped."
+                    } else {
+                        $detail += "Process $processName successfully stopped."
+                    }
+
+                    $stoppedProcesses += $processName
+                } catch {
+                    $detail += "An error occurred while stopping $processName $_"
+                    $errorCode = 1
+                }
             }
         } else {
             $detail += "Process $processName not running or not found."
@@ -180,7 +201,9 @@ function Restart-Processes {
     $detail = @()
     $errorCode = 0
 
-    foreach ($processName in $ProcessNames) {
+    $processNamesToRestart = $ProcessNames | Select-Object -Unique
+
+    foreach ($processName in $processNamesToRestart) {
         $detail += "Restarting process: $processName"
         try {
             if ($Arguments) {
@@ -471,31 +494,26 @@ function Show-UpdatePromptForm {
             "Win11FeatureUpdate" {
                 $output = & $Win11FeatureUpdate
             }
-			"Teams" {
-				$detail += "4. Calling TeamsUpdate ScriptBlock Now."
-				$Output = & $TeamsUpdate
-			}
-			"Edge" {
-				$detail += "4. Calling EdgeUpdate ScriptBlock Now."
-				$Output = & $EdgeUpdate
-			}
-			"Chrome" {
-				$detail += "4. Calling ChromeUpdate ScriptBlock Now."
-				$Output = & $ChromeUpdate
-			}
-			"Firefox" {
-				$detail += "4. Calling FirefoxUpdate ScriptBlock Now."
-				$Output = & $FirefoxUpdate
-			}
-			"M365Apps" {
-				$detail += "4. Calling M365AppsUpdate ScriptBlock Now."
-				$Output = & $M365AppsUpdate
-			}
+            "Teams" {
+                $output = & $TeamsUpdate
+            }
+            "Edge" {
+                $output = & $EdgeUpdate
+            }
+            "Chrome" {
+                $output = & $ChromeUpdate
+            }
+            "Firefox" {
+                $output = & $FirefoxUpdate
+            }
+            "M365Apps" {
+                $output = & $M365AppsUpdate
+            }
             default {
                 $output = Update-Application -AppName $appname -ProcessNames $config.Applications[$appname].ProcessNames
             }
         }
-		
+        
         # Store the output in the script-scoped variable
         $script:formOutput = $output
         # Close the form
@@ -573,20 +591,24 @@ function Show-UpdatePromptForm {
 }
 
 # Load the configuration file
-$config = Get-Config -ConfigFilePath "C:\GitHub\MasterAppPatching\config.json"
+$config = Get-Config -ConfigFilePath "C:\\GitHub\\MasterAppPatching\\config.json"
 
 # Main script execution starts here
 Write-Output "1. This is the beginning of the script, appName is $appName"
 
 # Check if appName has pending update, if not, exit script
-Write-Output "2. Checking for pending update of $appName"
-$isUpdatePending = PendingUpdateCheck -AppName $appname
+if (-not $Override) {
+    Write-Output "2. Checking for pending update of $appName"
+    $isUpdatePending = PendingUpdateCheck -AppName $appname
 
-if ($isUpdatePending -eq "No") {
-    Write-Output "2. $appName is not pending an update, nothing to do, exiting script"
-    Return 100
+    if ($isUpdatePending -eq "No") {
+        Write-Output "2. $appName is not pending an update, nothing to do, exiting script"
+        Return 100
+    } else {
+        Write-Output "2. $appName has a pending update, continuing with script"
+    }
 } else {
-    Write-Output "2. $appName has a pending update, continuing with script"
+    Write-Output "2. Override is enabled, skipping pending update check"
 }
 
 # Check call status
