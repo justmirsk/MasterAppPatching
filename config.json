@@ -3,12 +3,14 @@
     "Edge": {
       "CheckPath": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
       "ProcessNames": ["msedge", "edge"],
-      "ScheduledScript": "EdgeScheduledUpdate.ps1"
+      "ScheduledScript": "EdgeScheduledUpdate.ps1",
+      "RestartArguments": "--restore-last-session"
     },
     "Chrome": {
       "CheckPath": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
       "ProcessNames": ["chrome"],
-      "ScheduledScript": "ChromeScheduledUpdate.ps1"
+      "ScheduledScript": "ChromeScheduledUpdate.ps1",
+      "RestartArguments": "--restore-last-session"
     },
     "Firefox": {
       "CheckPath": "C:\\Program Files\\Mozilla Firefox\\firefox.exe",

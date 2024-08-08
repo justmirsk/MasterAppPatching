@@ -277,6 +277,7 @@ function Create-ScheduledTask {
     $scriptDirectory = $config.ScriptDirectory
     $scriptPath = "$scriptDirectory\Update-$AppName.ps1"
     $processNames = $config.Applications.$AppName.ProcessNames -join "', '"
+    $restartArguments = $config.Applications.$AppName.RestartArguments
 
     $scriptContent = @"
 # Auto-generated script to update $AppName
@@ -307,14 +308,14 @@ function Stop-Processes {
                         }
                     }
 
-                    #if (-not `$process.HasExited) {
-                        #`$process | Stop-Process -Force
-                        #`$detail += "Process `$processName forcefully stopped."
-                    #} else {
-                        #`$detail += "Process `$processName successfully stopped."
-                    #}
+                    if (-not `$process.HasExited) {
+                        `$process | Stop-Process -Force
+                        `$detail += "Process `$processName forcefully stopped."
+                    } else {
+                        `$detail += "Process `$processName successfully stopped."
+                    }
 
-                    #`$stoppedProcesses += `$processName
+                    `$stoppedProcesses += `$processName
                 } catch {
                     `$detail += "An error occurred while stopping `$processName"
                     `$errorCode = 1
@@ -377,7 +378,7 @@ if (`$stopResult.ErrorCode -ne 0) {
 Start-Sleep -Seconds 3
 
 # Restart processes
-`$restartResult = Restart-Processes -ProcessNames `$stopResult.StoppedProcesses -Arguments "--restore-last-session"
+`$restartResult = Restart-Processes -ProcessNames `$stopResult.StoppedProcesses -Arguments `"$restartArguments`"
 `$detail += `$restartResult.Detail
 if (`$restartResult.ErrorCode -ne 0) {
     return [PSCustomObject]@{
