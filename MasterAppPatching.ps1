@@ -325,58 +325,6 @@ $CancelButtonTasks = {
        }
 }
 
-# ScriptBlock to Update Apps (e.g., kill processes, restart apps)
-$InvokeAppUpdate = {
-    param($appName)
-    $detail = @() # Array to capture detail messages
-    $errorCode = 0 #Set the default errorcode to 0, other scriptblocks may adjust the errorcode
-    
-    $detail += "4. GUI Timeout Reached or User Pressed Restart App Now Button"
-    $detail += "4. App to update is $appName"
-    
-    switch ($appName) {
-        "Teams" {
-            $detail += "4. Calling TeamsUpdate ScriptBlock Now."
-            $Output = & $TeamsUpdate
-        }
-        "Edge" {
-            $detail += "4. Calling EdgeUpdate ScriptBlock Now."
-            $Output = & $EdgeUpdate
-        }
-        "Chrome" {
-            $detail += "4. Calling ChromeUpdate ScriptBlock Now."
-            $Output = & $ChromeUpdate
-        }
-        "Firefox" {
-            $detail += "4. Calling FirefoxUpdate ScriptBlock Now."
-            $Output = & $FirefoxUpdate
-        }
-        "M365Apps" {
-            $detail += "4. Calling M365AppsUpdate ScriptBlock Now."
-            $Output = & $M365AppsUpdate
-        }
-        "Win11FeatureUpdate" {
-            $detail += "4. Calling Win11FeatureUpdate ScriptBlock Now."
-            $Output = & $Win11FeatureUpdate
-        }
-        default {
-            $detail += "4. Application is unknown, code doesn't exist for other apps yet"
-            $errorCode = 1
-        }
-    }
-
-    if ($Output) {
-        $detail += $Output.Detail
-        $errorCode = $Output.ResultCode
-    }
-    
-    # Return a custom object with both result code and detail
-    return [PSCustomObject]@{
-        ResultCode = $errorCode
-        Detail = $detail -join "`n" # Join array elements into a single string
-    }
-}
-
 #Function to show a dialog prompt based on returned status codes
 function Show-AutoClosingMessageBox {
     param(

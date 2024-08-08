@@ -2,28 +2,39 @@
   "Applications": {
     "Edge": {
       "CheckPath": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\new_msedge.exe",
-      "ScheduledScript": "EdgeScheduledUpdate.ps1"
+      "UpdateScript": "EdgeUpdate.ps1",
+      "ScheduledScript": "EdgeScheduledUpdate.ps1",
+      "ProcessNames": ["edge", "ms-edge"]
     },
     "Chrome": {
       "CheckPath": "C:\\Program Files\\Google\\Chrome\\Application\\new_chrome.exe",
-      "ScheduledScript": "ChromeScheduledUpdate.ps1"
+      "UpdateScript": "ChromeUpdate.ps1",
+      "ScheduledScript": "ChromeScheduledUpdate.ps1",
+      "ProcessNames": ["chrome"]
     },
     "Firefox": {
-      "CheckPath": "C:\\Program Files\\Mozilla Firefox\\updated",
-      "ScheduledScript": "FirefoxScheduledUpdate.ps1"
+      "CheckPath": "C:\\Program Files\\Mozilla Firefox\\firefox.exe",
+      "UpdateScript": "FirefoxUpdate.ps1",
+      "ScheduledScript": "FirefoxScheduledUpdate.ps1",
+      "ProcessNames": ["firefox"]
     },
     "Teams": {
-      "CheckPath": "",
-      "ScheduledScript": "TeamsScheduledUpdate.ps1"
+      "CheckPath": "C:\\Program Files\\Microsoft Teams\\current\\Teams.exe",
+      "UpdateScript": "TeamsUpdate.ps1",
+      "ScheduledScript": "TeamsScheduledUpdate.ps1",
+      "ProcessNames": ["Teams", "ms-teams"]
     },
     "M365Apps": {
-      "CheckPath": "C:\\Program Files\\Common Files\\Microsoft Shared\\ClickToRun\\OfficeC2RClient.exe",
-      "ScheduledScript": "M365AppsScheduledUpdate.ps1"
+      "CheckPath": "C:\\Program Files\\Microsoft Office\\root\\Office16\\WINWORD.EXE",
+      "UpdateScript": "M365AppsUpdate.ps1",
+      "ScheduledScript": "M365AppsScheduledUpdate.ps1",
+      "ProcessNames": ["excel", "powerpnt", "winword", "outlook", "onenote", "visio"]
     },
     "Win11FeatureUpdate": {
       "TargetVersion": "10.0.22000",
+      "UpdateScript": "Win11FeatureUpdate.ps1",
       "ScheduledScript": "Win11FeatureUpdateScheduledUpdate.ps1"
     }
   },
-  "LogoFilePath": "C:\\dbt-scripts\\ScriptLogo.png"
+  "LogoFilePath": "C:\\temp\\ScriptLogo.png"
 }
